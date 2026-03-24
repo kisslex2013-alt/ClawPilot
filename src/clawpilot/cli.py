@@ -3,17 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 
 from clawpilot.activities.clawloop import run_dashboard, run_full_cycle, run_manifest, run_notify, run_smoke
+from clawpilot.artifacts.clawloop import detect_known_artifacts
 from clawpilot.config import load_settings
 from clawpilot.dev.runner import execute_dry_run_workflow
-from clawpilot.orchestration.registry import get_activity_specs, get_workflow_specs, list_activity_names, list_workflow_names
-from clawpilot.orchestration.summaries import summarize_command_result
-from clawpilot.artifacts.clawloop import detect_known_artifacts
+from clawpilot.orchestration.registry import list_activity_names, list_workflow_names
 from clawpilot.progress.serialization import events_to_jsonl
 from clawpilot.runtime.paths import ensure_local_runtime_dirs
 from clawpilot.runtime.sample_data import sample_progress_events
+from clawpilot.temporal.registry import get_temporal_activities, get_temporal_workflows, validate_registration_consistency
+from clawpilot.worker import maybe_build_local_worker_preview
 
 
 def _print_settings() -> None:
@@ -28,11 +28,8 @@ def _print_run(name: str, result) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="clawpilot")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("show-config")
-    sub.add_parser("check-env")
-    sub.add_parser("bootstrap-dev")
-    sub.add_parser("list-workflows")
-    sub.add_parser("list-activities")
+    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl"):
+        sub.add_parser(name)
     dry = sub.add_parser("dry-run")
     dry_sub = dry.add_subparsers(dest="dry_cmd", required=True)
     for name in ("full-cycle", "smoke", "dashboard", "notify", "manifest"):
@@ -41,9 +38,6 @@ def main(argv: list[str] | None = None) -> int:
     wf_sub = wf.add_subparsers(dest="workflow_name", required=True)
     for name in ("full-cycle", "smoke-check", "dashboard-refresh"):
         wf_sub.add_parser(name)
-    sub.add_parser("show-run-summary")
-    sub.add_parser("detect-artifacts")
-    sub.add_parser("sample-progress-jsonl")
     args = parser.parse_args(argv)
 
     if args.cmd == "show-config":
@@ -56,6 +50,14 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(list_workflow_names())); return 0
     if args.cmd == "list-activities":
         print("\n".join(list_activity_names())); return 0
+    if args.cmd == "list-temporal-workflows":
+        print("\n".join(get_temporal_workflows())); return 0
+    if args.cmd == "list-temporal-activities":
+        print("\n".join(get_temporal_activities())); return 0
+    if args.cmd == "validate-registration":
+        print(json.dumps(validate_registration_consistency(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "show-worker-plan":
+        print(json.dumps(maybe_build_local_worker_preview(), indent=2, sort_keys=True)); return 0
     if args.cmd == "sample-progress-jsonl":
         print(events_to_jsonl(sample_progress_events())); return 0
     if args.cmd == "show-run-summary":

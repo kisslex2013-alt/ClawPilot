@@ -37,6 +37,11 @@ src/clawpilot/runtime/__init__.py
 src/clawpilot/runtime/paths.py
 src/clawpilot/runtime/sample_data.py
 src/clawpilot/runtime/session.py
+src/clawpilot/temporal/__init__.py
+src/clawpilot/temporal/activities.py
+src/clawpilot/temporal/registry.py
+src/clawpilot/temporal/worker_runtime.py
+src/clawpilot/temporal/workflows.py
 src/clawpilot/workflows/__init__.py
 src/clawpilot/workflows/clawloop_full_cycle.py
 src/clawpilot/workflows/dashboard_refresh.py
@@ -52,3 +57,6 @@ tests/test_registry.py
 tests/test_runner.py
 tests/test_runtime_paths.py
 tests/test_summaries.py
+tests/test_temporal_registry.py
+tests/test_temporal_workflows.py
+tests/test_worker_runtime.py

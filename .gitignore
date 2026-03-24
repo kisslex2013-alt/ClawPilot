@@ -24,6 +24,7 @@ htmlcov/
 .ruff_cache/
 .tox/
 .nox/
+*.egg-info/
 
 # Node / dashboard artifacts
 node_modules/
