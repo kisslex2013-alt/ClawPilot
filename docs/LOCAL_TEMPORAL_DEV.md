@@ -28,6 +28,33 @@ The first actual execution path is still intentionally narrow:
 - no background worker loop by default
 - no deployment assumptions
 
+## Bounded real local execution
+
+The local execution layer is bounded and allowlisted.
+Only `smoke_check` is intended for `local_execute` in v1.
+`dashboard_refresh` and `clawloop_full_cycle` remain preview-only.
+
+## Preview vs dry-run vs local_execute
+
+- `preview`: no command execution, just planning
+- `dry_run`: command plan is built and simulated
+- `local_execute`: explicit opt-in only; bounded local script execution with persisted artifacts
+
+## Why smoke_check is first
+
+It is the smallest safe path, has the fewest artifacts, and is easiest to validate without widening the blast radius.
+
+## Why full_cycle is still guarded
+
+`full_cycle` touches more surfaces and is not the first bounded local execution path. Keep it preview-only until the smaller path is stable.
+
+## Persisted run artifacts under `.clawpilot/runs/`
+
+Local execution writes per-run artifacts under:
+- `.clawpilot/runs/<run_id>/progress.jsonl`
+- `.clawpilot/runs/<run_id>/run-summary.json`
+- `.clawpilot/runs/<run_id>/command-result.json`
+
 ## Preview-only commands
 
 - `show-config`
@@ -76,3 +103,11 @@ Because this repo is still a local dev surface, not a production daemon. Infinit
 6. `python -m clawpilot.cli temporal-connectivity-check --connect`
 
 Only use `--connect` when a real server is present.
+
+## Bounded local ClawLoop execution
+
+- `python -m clawpilot.cli local-exec smoke-check`
+- `python -m clawpilot.cli local-exec smoke-check --execute`
+- `python -m clawpilot.cli local-exec full-cycle`
+- `python -m clawpilot.cli show-latest-run-summary`
+- `python -m clawpilot.cli show-run-files`

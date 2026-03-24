@@ -20,7 +20,9 @@ def detect_known_artifacts(base_path: str, run_id: str | None = None) -> Artifac
         path = base / rel
         items.append(ArtifactRef(kind=kind, path=str(path), source="clawloop", exists=path.exists(), run_id=run_id))
     if run_id:
-        manifest = base / "reference/agent-eval/runs" / run_id / "manifest.json"
+        manifest = base / ".clawpilot" / "runs" / run_id / "manifest.json"
+        if not manifest.exists():
+            manifest = base / "reference/agent-eval/runs" / run_id / "manifest.json"
         items.append(ArtifactRef(kind=ArtifactKind.manifest, path=str(manifest), source="clawloop", exists=manifest.exists(), run_id=run_id))
     return ArtifactCollection(items=items)
 
