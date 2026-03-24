@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kisslex2013-alt/ClawPilot/schemas/progress_event.schema.json",
+  "title": "ClawPilot Progress Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id","task_id","workflow_name","workflow_run_id","event_type","level","phase","step_key","message","created_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "task_id": { "type": "string" },
+    "workflow_name": { "type": "string" },
+    "workflow_run_id": { "type": "string" },
+    "event_type": { "type": "string", "enum": ["task_accepted","phase_started","step_started","step_completed","step_failed","retry_scheduled","blocked","approval_required","resumed","task_completed","task_failed"] },
+    "level": { "type": "string", "enum": ["info","warning","error"] },
+    "phase": { "type": "string" },
+    "step_key": { "type": "string" },
+    "message": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object" }
+  }
+}

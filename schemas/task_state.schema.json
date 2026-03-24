@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kisslex2013-alt/ClawPilot/schemas/task_state.schema.json",
+  "title": "ClawPilot Task State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id","title","status","priority","current_phase","current_step","progress_percent","needs_human_approval","blocker_reason","created_at","updated_at","artifact_refs","last_progress_event_id"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "title": { "type": "string" },
+    "status": { "type": "string", "enum": ["new","planned","running","verifying","waiting_human","blocked","done","failed","cancelled"] },
+    "priority": { "type": "string", "enum": ["low","normal","high","critical"] },
+    "current_phase": { "type": "string" },
+    "current_step": { "type": "string" },
+    "progress_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "needs_human_approval": { "type": "boolean" },
+    "blocker_reason": { "type": ["string","null"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "artifact_refs": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["kind","path","source"], "properties": { "kind": { "type": "string" }, "path": { "type": "string" }, "source": { "type": "string" }, "run_id": { "type": "string" } } } },
+    "last_progress_event_id": { "type": ["string","null"] }
+  }
+}

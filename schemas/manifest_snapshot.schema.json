@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kisslex2013-alt/ClawPilot/schemas/manifest_snapshot.schema.json",
+  "title": "ClawPilot Manifest Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id","mode","workspace","git_commit","git_dirty","config_hash","judge_stack","artifacts","verdict_counts","generated_at"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "mode": { "type": "string" },
+    "workspace": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "git_dirty": { "type": "boolean" },
+    "config_hash": { "type": "string" },
+    "judge_stack": { "type": "array", "items": { "type": "string" } },
+    "artifacts": { "type": "object", "additionalProperties": false, "properties": { "latest_report": { "type": "string" }, "latest_delta": { "type": "string" }, "dashboard": { "type": "string" }, "weekly_report": { "type": "string" }, "disagreements": { "type": "string" }, "manifest_path": { "type": "string" } } },
+    "verdict_counts": { "type": "object", "additionalProperties": false, "required": ["pass","retry","escalation"], "properties": { "pass": { "type": "integer", "minimum": 0 }, "retry": { "type": "integer", "minimum": 0 }, "escalation": { "type": "integer", "minimum": 0 } } },
+    "generated_at": { "type": "string", "format": "date-time" }
+  }
+}

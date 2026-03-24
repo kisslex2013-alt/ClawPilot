@@ -1,0 +1,58 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# Node / dashboard artifacts
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+.vite/
+.cache/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs / runtime artifacts
+logs/
+*.log
+.clawpilot/
+*.pid
+*.seed
+.tmp/
+tmp/
+
+# Temporary run artifacts
+*.run.json
+*.run.log
+*.artifact
+
+# Misc
+*.sqlite3
