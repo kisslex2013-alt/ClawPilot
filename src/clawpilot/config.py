@@ -55,6 +55,9 @@ class AppSettings(BaseModel):
     clawloop: ClawLoopSettings = Field(default_factory=ClawLoopSettings)
     openclaw: OpenClawSettings = Field(default_factory=OpenClawSettings)
     telegram: TelegramSettings = Field(default_factory=TelegramSettings)
+    notification_transport_mode: str = "dry_run"
+    notification_log_dir: str = ".clawpilot/notifications"
+    telegram_transport_enabled: bool = False
     log_level: str = "info"
     env: str = "development"
 
@@ -88,6 +91,9 @@ def load_settings() -> AppSettings:
             chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
             progress_mode=os.getenv("TELEGRAM_PROGRESS_MODE", "normal"),
         ),
+        notification_transport_mode=os.getenv("NOTIFICATION_TRANSPORT_MODE", "dry_run"),
+        notification_log_dir=os.getenv("NOTIFICATION_LOG_DIR", ".clawpilot/notifications"),
+        telegram_transport_enabled=os.getenv("TELEGRAM_TRANSPORT_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
         log_level=os.getenv("CLAWPILOT_LOG_LEVEL", "info"),
         env=os.getenv("CLAWPILOT_ENV", "development"),
     )

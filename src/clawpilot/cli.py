@@ -13,6 +13,10 @@ from clawpilot.execution.contracts import ExecutionMode
 from clawpilot.notifier.builders import build_blocker_notification, build_completion_notification, build_digest_messages, build_live_progress_messages
 from clawpilot.notifier.contracts import ProgressNotificationPolicy
 from clawpilot.notifier.examples import example_blocker_message, example_completion_message, example_digest_feed, example_progress_feed
+from clawpilot.notifier.persistence import load_recent_notification_log
+from clawpilot.notifier.renderers import render_blocker_message, render_completion_message
+from clawpilot.notifier.senders import SenderMode, send_rendered_message, send_rendered_messages
+from clawpilot.notifier.transport import build_transport_spec, describe_transport_mode, resolve_default_transport
 from clawpilot.orchestration.registry import list_activity_names, list_workflow_names
 from clawpilot.progress.serialization import events_to_jsonl
 from clawpilot.runtime.paths import ensure_local_runtime_dirs
@@ -28,7 +32,7 @@ from clawpilot.worker import maybe_build_local_worker_preview
 
 def _print_settings() -> None:
     settings = load_settings()
-    print(json.dumps({"temporal": settings.temporal.model_dump(), "database": {"url": "<hidden>"}, "clawloop": {"repo_path": str(settings.clawloop.repo_path)}, "openclaw": {"workspace": str(settings.openclaw.workspace), "config_path": str(settings.openclaw.config_path)}, "telegram": {"bot_token": bool(settings.telegram.bot_token), "chat_id": bool(settings.telegram.chat_id), "progress_mode": settings.telegram.progress_mode}, "log_level": settings.log_level, "env": settings.env}, indent=2, sort_keys=True))
+    print(json.dumps({"temporal": settings.temporal.model_dump(), "database": {"url": "<hidden>"}, "clawloop": {"repo_path": str(settings.clawloop.repo_path)}, "openclaw": {"workspace": str(settings.openclaw.workspace), "config_path": str(settings.openclaw.config_path)}, "telegram": {"bot_token": bool(settings.telegram.bot_token), "chat_id": bool(settings.telegram.chat_id), "progress_mode": settings.telegram.progress_mode}, "notification_transport_mode": settings.notification_transport_mode, "notification_log_dir": settings.notification_log_dir, "telegram_transport_enabled": settings.telegram_transport_enabled, "log_level": settings.log_level, "env": settings.env}, indent=2, sort_keys=True))
 
 
 def _print_run(name: str, result) -> None:
@@ -46,7 +50,7 @@ def _latest_run_dir() -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="clawpilot")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan", "temporal-smoke-plan", "temporal-connectivity-smoke", "temporal-worker-start-plan", "show-latest-run-summary", "show-run-files", "render-progress-feed", "render-digest", "render-blocker", "render-completion"):
+    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan", "temporal-smoke-plan", "temporal-connectivity-smoke", "temporal-worker-start-plan", "show-latest-run-summary", "show-run-files", "render-progress-feed", "render-digest", "render-blocker", "render-completion", "show-transport-mode", "show-notification-log", "send-rendered-progress", "send-rendered-digest", "send-rendered-blocker", "send-rendered-completion"):
         sub.add_parser(name)
     dry = sub.add_parser("dry-run")
     dry_sub = dry.add_subparsers(dest="dry_cmd", required=True)
@@ -112,6 +116,22 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(example_blocker_message(), indent=2, sort_keys=True)); return 0
     if args.cmd == "render-completion":
         print(json.dumps(example_completion_message(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "show-transport-mode":
+        print(json.dumps(describe_transport_mode(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "show-notification-log":
+        print(json.dumps(load_recent_notification_log(limit=20), indent=2, sort_keys=True)); return 0
+    if args.cmd == "send-rendered-progress":
+        result = send_rendered_messages(build_live_progress_messages(sample_progress_events()), mode=SenderMode(load_settings().notification_transport_mode), base_dir=".")
+        print(json.dumps(result.__dict__, default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
+    if args.cmd == "send-rendered-digest":
+        result = send_rendered_messages(build_digest_messages(execute_dry_run_workflow(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run")["summary"] and __import__("clawpilot.orchestration.contracts", fromlist=["RunSummary"]).RunSummary.model_validate(execute_dry_run_workflow(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run")["summary"])), mode=SenderMode(load_settings().notification_transport_mode), base_dir=".")
+        print(json.dumps(result.__dict__, default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
+    if args.cmd == "send-rendered-blocker":
+        result = send_rendered_message(build_blocker_notification("Blocked", "No-op"), mode=SenderMode(load_settings().notification_transport_mode), base_dir=".")
+        print(json.dumps(result.__dict__, default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
+    if args.cmd == "send-rendered-completion":
+        result = send_rendered_message(build_completion_notification(__import__("clawpilot.orchestration.contracts", fromlist=["RunSummary"]).RunSummary(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run", status=__import__("clawpilot.orchestration.contracts", fromlist=["RunStatus"]).RunStatus.succeeded, started_at="2026-03-24T00:00:00Z", finished_at="2026-03-24T00:01:00Z")), mode=SenderMode(load_settings().notification_transport_mode), base_dir=".")
+        print(json.dumps(result.__dict__, default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
     if args.cmd == "dry-run":
         mapping = {"full-cycle": run_full_cycle, "smoke": run_smoke, "dashboard": run_dashboard, "notify": run_notify, "manifest": run_manifest}
         _print_run(args.dry_cmd, mapping[args.dry_cmd](dry_run=True)); return 0

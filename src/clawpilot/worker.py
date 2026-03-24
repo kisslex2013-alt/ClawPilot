@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from clawpilot.config import AppSettings, load_settings
 from clawpilot.execution.guardrails import build_local_execution_guardrails
+from clawpilot.notifier.transport import build_transport_spec, describe_transport_mode
 from clawpilot.orchestration.registry import get_activity_specs, get_workflow_specs
 from clawpilot.temporal.client import describe_client_target
 from clawpilot.temporal.registry import describe_temporal_registration, validate_registration_consistency
@@ -71,3 +72,12 @@ def describe_v1_local_execute_policy() -> dict[str, object]:
 
 def explain_why_full_cycle_is_not_default_execute() -> str:
     return "full_cycle remains guarded because it fans out into more artifacts and is not the first bounded local execution path."
+
+
+def describe_notification_transport_modes() -> list[str]:
+    return ["dry_run", "file_log", "disabled"]
+
+
+def build_notification_transport_summary(settings: AppSettings | None = None) -> dict[str, object]:
+    settings = settings or load_settings()
+    return {"transport": describe_transport_mode(settings), "modes": describe_notification_transport_modes(), "spec": build_transport_spec(settings).__dict__}
