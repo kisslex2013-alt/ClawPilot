@@ -63,6 +63,12 @@ class AppSettings(BaseModel):
     telegram_api_base: str = "https://api.telegram.org"
     telegram_send_timeout_seconds: float = 5.0
     telegram_live_send_enabled: bool = False
+    notification_route_mode: str | None = None
+    prefer_openclaw_routing: bool = False
+    openclaw_routing_enabled: bool = False
+    openclaw_workspace_path: str | None = None
+    openclaw_channel_name: str | None = None
+    openclaw_routing_preview_only: bool = True
     log_level: str = "info"
     env: str = "development"
 
@@ -104,6 +110,12 @@ def load_settings() -> AppSettings:
         telegram_api_base=os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org"),
         telegram_send_timeout_seconds=float(os.getenv("TELEGRAM_SEND_TIMEOUT_SECONDS", "5.0")),
         telegram_live_send_enabled=os.getenv("TELEGRAM_LIVE_SEND_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
+        notification_route_mode=os.getenv("NOTIFICATION_ROUTE_MODE") or None,
+        prefer_openclaw_routing=os.getenv("PREFER_OPENCLAW_ROUTING", "false").lower() in {"1", "true", "yes", "on"},
+        openclaw_routing_enabled=os.getenv("OPENCLAW_ROUTING_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
+        openclaw_workspace_path=os.getenv("OPENCLAW_WORKSPACE_PATH") or None,
+        openclaw_channel_name=os.getenv("OPENCLAW_CHANNEL_NAME") or None,
+        openclaw_routing_preview_only=os.getenv("OPENCLAW_ROUTING_PREVIEW_ONLY", "true").lower() in {"1", "true", "yes", "on"},
         log_level=os.getenv("CLAWPILOT_LOG_LEVEL", "info"),
         env=os.getenv("CLAWPILOT_ENV", "development"),
     )

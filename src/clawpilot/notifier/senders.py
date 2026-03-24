@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 
 from clawpilot.notifier.models import NotificationEnvelope, RenderedMessage
+from clawpilot.notifier.openclaw_routing import preview_openclaw_route
 from clawpilot.notifier.persistence import build_notification_log_path, persist_rendered_message, persist_send_result
 from clawpilot.notifier.telegram_direct import build_telegram_target, send_telegram_message
-
-
-class SenderMode(str, Enum):
-    dry_run = "dry_run"
-    file_log = "file_log"
-    disabled = "disabled"
-    telegram_direct = "telegram_direct"
+from clawpilot.notifier.transport import SenderMode
 
 
 @dataclass(frozen=True)
@@ -54,6 +48,11 @@ def send_to_telegram_direct(message: RenderedMessage | NotificationEnvelope, *, 
     return SendResult(mode=SenderMode.telegram_direct, sent=bool(outcome.get("delivered")), attempted=bool(outcome.get("attempted")), delivered=bool(outcome.get("delivered")), transport_mode="telegram_direct", target_summary=str(outcome.get("target_summary")), message_kind=str(getattr(message, "kind", "unknown")), error=outcome.get("error"), note="explicit live send" if outcome.get("delivered") else "live send failed or not delivered")
 
 
+def send_to_openclaw_routing_stub(message: RenderedMessage | NotificationEnvelope, *, base_dir: str = ".") -> SendResult:
+    preview = preview_openclaw_route(message)
+    return SendResult(mode=SenderMode.openclaw_routing_stub, sent=False, attempted=False, delivered=False, transport_mode="openclaw_routing_stub", target_summary=str(preview["target"]), message_kind=str(getattr(message, "kind", "unknown")), note="preview/stub only")
+
+
 def send_rendered_message(message: RenderedMessage | NotificationEnvelope, *, mode: SenderMode = SenderMode.dry_run, base_dir: str = ".") -> SendResult:
     if mode == SenderMode.dry_run:
         result = send_to_dry_run_sink(message)
@@ -61,6 +60,8 @@ def send_rendered_message(message: RenderedMessage | NotificationEnvelope, *, mo
         result = send_to_file_log(message, base_dir=base_dir)
     elif mode == SenderMode.telegram_direct:
         result = send_to_telegram_direct(message, base_dir=base_dir)
+    elif mode == SenderMode.openclaw_routing_stub:
+        result = send_to_openclaw_routing_stub(message, base_dir=base_dir)
     else:
         result = SendResult(mode=SenderMode.disabled, sent=False, attempted=False, delivered=False, transport_mode="disabled", target_summary="none", message_kind=str(getattr(message, "kind", "unknown")), note="explicitly disabled")
     persist_send_result(base_dir=base_dir, result=result)
