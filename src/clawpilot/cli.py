@@ -12,11 +12,14 @@ from clawpilot.orchestration.registry import list_activity_names, list_workflow_
 from clawpilot.progress.serialization import events_to_jsonl
 from clawpilot.runtime.paths import ensure_local_runtime_dirs
 from clawpilot.runtime.sample_data import sample_progress_events
-from clawpilot.temporal.client import describe_client_target, maybe_connect_client
+from clawpilot.temporal.client import check_temporal_connectivity, describe_client_target, maybe_connect_client, maybe_start_workflow
 from clawpilot.temporal.dev_runner import build_dev_run_plan, maybe_run_connectivity_check, run_worker_preview
 from clawpilot.temporal.dev_server import build_dev_server_checklist, build_dev_server_start_hint, describe_local_temporal_dev_requirements
+from clawpilot.temporal.execution import build_execution_request
+from clawpilot.temporal.local_smoke import build_local_smoke_plan, run_local_connectivity_smoke, summarize_local_smoke
 from clawpilot.temporal.registry import get_temporal_activities, get_temporal_workflows, validate_registration_consistency
-from clawpilot.temporal.worker_runtime import build_task_queue_name, create_worker_definition, describe_worker_runtime
+from clawpilot.temporal.sample_workflows import build_sample_workflow_submission, get_sample_workflow_name
+from clawpilot.temporal.worker_runtime import build_task_queue_name, build_worker_start_plan, create_worker_definition, describe_worker_runtime, maybe_start_worker_once
 from clawpilot.worker import build_connectivity_guardrails, build_local_dev_bootstrap_summary, maybe_build_local_worker_preview, describe_safe_dev_modes
 
 
@@ -32,7 +35,7 @@ def _print_run(name: str, result) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="clawpilot")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan"):
+    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan", "temporal-smoke-plan", "temporal-connectivity-smoke", "temporal-worker-start-plan"):
         sub.add_parser(name)
     dry = sub.add_parser("dry-run")
     dry_sub = dry.add_subparsers(dest="dry_cmd", required=True)
@@ -42,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
     wf_sub = wf.add_subparsers(dest="workflow_name", required=True)
     for name in ("full-cycle", "smoke-check", "dashboard-refresh"):
         wf_sub.add_parser(name)
+    tsw = sub.add_parser("temporal-start-workflow")
+    tsw.add_argument("workflow_name", nargs="?", default="smoke-check")
+    tsw.add_argument("--connect", action="store_true")
     args = parser.parse_args(argv)
 
     if args.cmd == "show-config": _print_settings(); return 0
@@ -63,6 +69,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "show-worker-definition": print(json.dumps(create_worker_definition(), indent=2, sort_keys=True)); return 0
     if args.cmd == "preview-worker": print(json.dumps(run_worker_preview(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run"), indent=2, sort_keys=True)); return 0
     if args.cmd == "preview-run-plan": print(json.dumps(build_dev_run_plan(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run"), indent=2, sort_keys=True)); return 0
+    if args.cmd == "temporal-smoke-plan": print(json.dumps(build_local_smoke_plan(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run"), indent=2, sort_keys=True)); return 0
+    if args.cmd == "temporal-connectivity-smoke":
+        connect = "--connect" in (argv or [])
+        print(json.dumps(run_local_connectivity_smoke(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run", connect=connect), indent=2, sort_keys=True)); return 0
+    if args.cmd == "temporal-start-workflow":
+        connect = getattr(args, "connect", False)
+        mapping = {"smoke-check": "smoke_check", "dashboard-refresh": "dashboard_refresh", "full-cycle": "clawloop_full_cycle"}
+        print(json.dumps(maybe_start_workflow(workflow_name=mapping[args.workflow_name], task_id="sample-task", run_id="sample-run", connect=connect), default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
+    if args.cmd == "temporal-worker-start-plan": print(json.dumps(build_worker_start_plan(connect="--connect" in (argv or [] )).__dict__, indent=2, sort_keys=True)); return 0
     if args.cmd == "dry-run":
         mapping = {"full-cycle": run_full_cycle, "smoke": run_smoke, "dashboard": run_dashboard, "notify": run_notify, "manifest": run_manifest}
         _print_run(args.dry_cmd, mapping[args.dry_cmd](dry_run=True)); return 0

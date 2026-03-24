@@ -15,6 +15,13 @@ class WorkerOptions:
     worker_identity: str | None
 
 
+@dataclass(frozen=True)
+class WorkerStartPlan:
+    connect: bool
+    worker_definition: dict[str, object]
+    guardrails: list[str]
+
+
 def build_task_queue_name(settings: AppSettings | None = None) -> str:
     return (settings or load_settings()).temporal.task_queue
 
@@ -39,6 +46,17 @@ def create_worker_components(*, settings: AppSettings | None = None) -> dict[str
 
 def create_worker_definition(settings: AppSettings | None = None) -> dict[str, object]:
     return {"client": build_client_options(settings).__dict__, "worker": asdict(build_worker_options(settings))}
+
+
+def build_worker_start_plan(settings: AppSettings | None = None, connect: bool = False) -> WorkerStartPlan:
+    return WorkerStartPlan(connect=connect, worker_definition=create_worker_definition(settings), guardrails=["Preview mode is default.", "Connect must be explicit.", "No infinite loop by default."])
+
+
+def maybe_start_worker_once(settings: AppSettings | None = None, connect: bool = False) -> dict[str, object]:
+    plan = build_worker_start_plan(settings, connect=connect)
+    if not connect:
+        return {"started": False, "plan": asdict(plan)}
+    return {"started": False, "plan": asdict(plan), "client": maybe_connect_client(settings, connect=True), "note": "live worker start is intentionally not automatic"}
 
 
 def maybe_create_worker_runtime(settings: AppSettings | None = None, connect: bool = False) -> dict[str, object]:
