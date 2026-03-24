@@ -38,8 +38,10 @@ def build_temporal_registration_summary() -> dict[str, object]:
 
 def build_worker_bootstrap_plan(settings: AppSettings | None = None) -> dict[str, object]:
     settings = settings or load_settings()
-    return {"options": build_worker_options(settings).model_dump(), "runtime": describe_worker_runtime(settings)}
+    from dataclasses import asdict
+    return {"options": asdict(build_worker_options(settings)), "runtime": describe_worker_runtime(settings)}
 
 
 def maybe_build_local_worker_preview(settings: AppSettings | None = None) -> dict[str, object]:
-    return {"topology": describe_worker_topology().__dict__, "registration": describe_temporal_registration(), "bootstrap": build_worker_bootstrap_plan(settings)}
+    settings = settings or load_settings()
+    return {"temporal_namespace": settings.temporal.namespace, "topology": describe_worker_topology().__dict__, "registration": describe_temporal_registration(), "bootstrap": build_worker_bootstrap_plan(settings)}

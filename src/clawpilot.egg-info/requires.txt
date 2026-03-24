@@ -1,6 +1,0 @@
-temporalio
-pydantic
-
-[dev]
-pytest
-ruff

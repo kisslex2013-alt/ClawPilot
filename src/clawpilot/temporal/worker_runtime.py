@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 from clawpilot.config import AppSettings, load_settings
 
@@ -24,7 +24,7 @@ def describe_worker_runtime(settings: AppSettings | None = None) -> dict[str, ob
 
 
 def create_worker_components(*, settings: AppSettings | None = None) -> dict[str, object]:
-    return {"options": build_worker_options(settings).model_dump(), "runtime": describe_worker_runtime(settings)}
+    return {"options": asdict(build_worker_options(settings)), "runtime": describe_worker_runtime(settings)}
 
 
 def maybe_create_client(*, connect: bool = False, settings: AppSettings | None = None) -> dict[str, object]:
