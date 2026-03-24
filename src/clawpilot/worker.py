@@ -4,8 +4,9 @@ from dataclasses import dataclass
 
 from clawpilot.config import AppSettings, load_settings
 from clawpilot.orchestration.registry import get_activity_specs, get_workflow_specs
+from clawpilot.temporal.client import describe_client_target
 from clawpilot.temporal.registry import describe_temporal_registration, validate_registration_consistency
-from clawpilot.temporal.worker_runtime import build_worker_options, describe_worker_runtime
+from clawpilot.temporal.worker_runtime import build_task_queue_name, build_worker_identity, build_worker_options, describe_worker_runtime, maybe_create_worker_runtime
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,22 @@ def build_temporal_registration_summary() -> dict[str, object]:
 
 def build_worker_bootstrap_plan(settings: AppSettings | None = None) -> dict[str, object]:
     settings = settings or load_settings()
-    from dataclasses import asdict
-    return {"options": asdict(build_worker_options(settings)), "runtime": describe_worker_runtime(settings)}
+    return {"options": build_worker_options(settings).__dict__, "runtime": describe_worker_runtime(settings)}
 
 
 def maybe_build_local_worker_preview(settings: AppSettings | None = None) -> dict[str, object]:
     settings = settings or load_settings()
     return {"temporal_namespace": settings.temporal.namespace, "topology": describe_worker_topology().__dict__, "registration": describe_temporal_registration(), "bootstrap": build_worker_bootstrap_plan(settings)}
+
+
+def build_local_dev_bootstrap_summary(settings: AppSettings | None = None) -> dict[str, object]:
+    settings = settings or load_settings()
+    return {"client_target": describe_client_target(settings), "task_queue": build_task_queue_name(settings), "worker_identity": build_worker_identity(settings), "registration": describe_temporal_registration()}
+
+
+def build_connectivity_guardrails() -> list[str]:
+    return ["Preview mode is default.", "Connect mode is explicit.", "No worker loop runs by default.", "No live Temporal connection happens on import."]
+
+
+def describe_safe_dev_modes() -> dict[str, object]:
+    return {"preview": "local summaries only", "connect": "explicit and optional", "live": "future only"}

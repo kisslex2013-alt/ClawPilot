@@ -10,6 +10,10 @@ class TemporalSettings(BaseModel):
     namespace: str = "clawpilot"
     task_queue: str = "clawpilot-main"
     address: str = "localhost:7233"
+    enable_tls: bool = False
+    connect_timeout_seconds: float = 5.0
+    worker_identity: str | None = None
+    dev_connect_enabled: bool = False
 
 
 class DatabaseSettings(BaseModel):
@@ -68,6 +72,10 @@ def load_settings() -> AppSettings:
             namespace=os.getenv("TEMPORAL_NAMESPACE", "clawpilot"),
             task_queue=os.getenv("TEMPORAL_TASK_QUEUE", "clawpilot-main"),
             address=os.getenv("TEMPORAL_ADDRESS", "localhost:7233"),
+            enable_tls=os.getenv("TEMPORAL_ENABLE_TLS", "false").lower() in {"1", "true", "yes", "on"},
+            connect_timeout_seconds=float(os.getenv("TEMPORAL_CONNECT_TIMEOUT_SECONDS", "5.0")),
+            worker_identity=os.getenv("TEMPORAL_WORKER_IDENTITY") or None,
+            dev_connect_enabled=os.getenv("TEMPORAL_DEV_CONNECT_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
         ),
         database=DatabaseSettings(url=os.getenv("DATABASE_URL", "postgresql://clawpilot:clawpilot@localhost:5432/clawpilot")),
         clawloop=ClawLoopSettings(repo_path=Path(os.getenv("CLAWLOOP_REPO_PATH", "/root/clawloop"))),

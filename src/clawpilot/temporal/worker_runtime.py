@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 from clawpilot.config import AppSettings, load_settings
+from clawpilot.temporal.client import build_client_options, maybe_connect_client
 
 
 @dataclass(frozen=True)
@@ -11,22 +12,36 @@ class WorkerOptions:
     task_queue: str
     workflows: list[str]
     activities: list[str]
+    worker_identity: str | None
+
+
+def build_task_queue_name(settings: AppSettings | None = None) -> str:
+    return (settings or load_settings()).temporal.task_queue
+
+
+def build_worker_identity(settings: AppSettings | None = None) -> str | None:
+    return (settings or load_settings()).temporal.worker_identity
 
 
 def build_worker_options(settings: AppSettings | None = None) -> WorkerOptions:
     settings = settings or load_settings()
-    return WorkerOptions(namespace=settings.temporal.namespace, task_queue=settings.temporal.task_queue, workflows=["clawloop_full_cycle", "smoke_check", "dashboard_refresh"], activities=["run_full_cycle_activity", "run_smoke_activity", "run_dashboard_activity", "run_notify_activity", "run_manifest_activity"])
+    return WorkerOptions(namespace=settings.temporal.namespace, task_queue=settings.temporal.task_queue, workflows=["clawloop_full_cycle", "smoke_check", "dashboard_refresh"], activities=["run_full_cycle_activity", "run_smoke_activity", "run_dashboard_activity", "run_notify_activity", "run_manifest_activity"], worker_identity=settings.temporal.worker_identity)
 
 
 def describe_worker_runtime(settings: AppSettings | None = None) -> dict[str, object]:
     options = build_worker_options(settings)
-    return {"namespace": options.namespace, "task_queue": options.task_queue, "workflows": options.workflows, "activities": options.activities, "connect_requested": False}
+    return {"namespace": options.namespace, "task_queue": options.task_queue, "workflows": options.workflows, "activities": options.activities, "worker_identity": options.worker_identity, "connect_requested": False}
 
 
 def create_worker_components(*, settings: AppSettings | None = None) -> dict[str, object]:
     return {"options": asdict(build_worker_options(settings)), "runtime": describe_worker_runtime(settings)}
 
 
-def maybe_create_client(*, connect: bool = False, settings: AppSettings | None = None) -> dict[str, object]:
-    options = build_worker_options(settings)
-    return {"connect": connect, "namespace": options.namespace, "task_queue": options.task_queue}
+def create_worker_definition(settings: AppSettings | None = None) -> dict[str, object]:
+    return {"client": build_client_options(settings).__dict__, "worker": asdict(build_worker_options(settings))}
+
+
+def maybe_create_worker_runtime(settings: AppSettings | None = None, connect: bool = False) -> dict[str, object]:
+    if not connect:
+        return {"connect": False, "definition": create_worker_definition(settings), "runtime": describe_worker_runtime(settings)}
+    return {"connect": True, "client": maybe_connect_client(settings, connect=True), "definition": create_worker_definition(settings), "runtime": describe_worker_runtime(settings)}
