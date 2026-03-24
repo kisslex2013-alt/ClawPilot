@@ -58,10 +58,15 @@ class AppSettings(BaseModel):
     notification_transport_mode: str = "dry_run"
     notification_log_dir: str = ".clawpilot/notifications"
     telegram_transport_enabled: bool = False
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    telegram_api_base: str = "https://api.telegram.org"
+    telegram_send_timeout_seconds: float = 5.0
+    telegram_live_send_enabled: bool = False
     log_level: str = "info"
     env: str = "development"
 
-    @field_validator("log_level", "env")
+    @field_validator("log_level", "env", "notification_transport_mode", "telegram_api_base")
     @classmethod
     def validate_non_empty(cls, value: str) -> str:
         if not value.strip():
@@ -94,6 +99,11 @@ def load_settings() -> AppSettings:
         notification_transport_mode=os.getenv("NOTIFICATION_TRANSPORT_MODE", "dry_run"),
         notification_log_dir=os.getenv("NOTIFICATION_LOG_DIR", ".clawpilot/notifications"),
         telegram_transport_enabled=os.getenv("TELEGRAM_TRANSPORT_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
+        telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
+        telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
+        telegram_api_base=os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org"),
+        telegram_send_timeout_seconds=float(os.getenv("TELEGRAM_SEND_TIMEOUT_SECONDS", "5.0")),
+        telegram_live_send_enabled=os.getenv("TELEGRAM_LIVE_SEND_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
         log_level=os.getenv("CLAWPILOT_LOG_LEVEL", "info"),
         env=os.getenv("CLAWPILOT_ENV", "development"),
     )

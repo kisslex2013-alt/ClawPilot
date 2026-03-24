@@ -3,11 +3,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Protocol
-
-
-class _SendResultLike(Protocol):
-    def __dict__(self) -> dict: ...
 
 
 def build_notification_log_path(base_dir: str = ".") -> str:
@@ -20,6 +15,14 @@ def persist_rendered_message(*, base_dir: str, message: object) -> str:
     payload = message.model_dump() if hasattr(message, "model_dump") else dict(message)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), "message": payload}, ensure_ascii=False, sort_keys=True) + "\n")
+    return str(path)
+
+
+def persist_send_attempt(*, base_dir: str, payload: dict) -> str:
+    path = Path(base_dir) / ".clawpilot" / "notifications" / "send-attempts.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"ts": datetime.now(timezone.utc).isoformat(), **payload}, ensure_ascii=False, sort_keys=True) + "\n")
     return str(path)
 
 

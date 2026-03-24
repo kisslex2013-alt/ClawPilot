@@ -5,22 +5,27 @@ from enum import Enum
 
 from clawpilot.notifier.models import NotificationEnvelope, RenderedMessage
 from clawpilot.notifier.persistence import build_notification_log_path, persist_rendered_message, persist_send_result
+from clawpilot.notifier.telegram_direct import build_telegram_target, send_telegram_message
 
 
 class SenderMode(str, Enum):
     dry_run = "dry_run"
     file_log = "file_log"
     disabled = "disabled"
+    telegram_direct = "telegram_direct"
 
 
 @dataclass(frozen=True)
 class SendResult:
     mode: SenderMode
     sent: bool
-    transport: str
-    target: str
+    attempted: bool
+    delivered: bool
+    transport_mode: str
+    target_summary: str
     message_kind: str
     path: str | None = None
+    error: str | None = None
     note: str | None = None
 
 
@@ -34,12 +39,19 @@ class SendBatchResult:
 
 def send_to_dry_run_sink(message: RenderedMessage | NotificationEnvelope, *, target: str = "local-preview") -> SendResult:
     kind = getattr(message, "kind", "unknown")
-    return SendResult(mode=SenderMode.dry_run, sent=False, transport="dry_run", target=target, message_kind=str(kind), note="dry-run sink; no network")
+    return SendResult(mode=SenderMode.dry_run, sent=False, attempted=False, delivered=False, transport_mode="dry_run", target_summary=target, message_kind=str(kind), note="dry-run sink; no network")
 
 
 def send_to_file_log(message: RenderedMessage | NotificationEnvelope, *, base_dir: str = ".") -> SendResult:
     path = persist_rendered_message(base_dir=base_dir, message=message)
-    return SendResult(mode=SenderMode.file_log, sent=False, transport="file_log", target=str(build_notification_log_path(base_dir)), message_kind=str(getattr(message, "kind", "unknown")), path=path, note="persisted to local notification log")
+    return SendResult(mode=SenderMode.file_log, sent=False, attempted=False, delivered=False, transport_mode="file_log", target_summary=str(build_notification_log_path(base_dir)), message_kind=str(getattr(message, "kind", "unknown")), path=path, note="persisted to local notification log")
+
+
+def send_to_telegram_direct(message: RenderedMessage | NotificationEnvelope, *, base_dir: str = ".") -> SendResult:
+    target = build_telegram_target()
+    payload = message.model_dump() if hasattr(message, "model_dump") else dict(message)
+    outcome = send_telegram_message(target=target, text=payload.get("text") or payload.get("body") or str(payload))
+    return SendResult(mode=SenderMode.telegram_direct, sent=bool(outcome.get("delivered")), attempted=bool(outcome.get("attempted")), delivered=bool(outcome.get("delivered")), transport_mode="telegram_direct", target_summary=str(outcome.get("target_summary")), message_kind=str(getattr(message, "kind", "unknown")), error=outcome.get("error"), note="explicit live send" if outcome.get("delivered") else "live send failed or not delivered")
 
 
 def send_rendered_message(message: RenderedMessage | NotificationEnvelope, *, mode: SenderMode = SenderMode.dry_run, base_dir: str = ".") -> SendResult:
@@ -47,8 +59,10 @@ def send_rendered_message(message: RenderedMessage | NotificationEnvelope, *, mo
         result = send_to_dry_run_sink(message)
     elif mode == SenderMode.file_log:
         result = send_to_file_log(message, base_dir=base_dir)
+    elif mode == SenderMode.telegram_direct:
+        result = send_to_telegram_direct(message, base_dir=base_dir)
     else:
-        result = SendResult(mode=SenderMode.disabled, sent=False, transport="disabled", target="none", message_kind=str(getattr(message, "kind", "unknown")), note="explicitly disabled")
+        result = SendResult(mode=SenderMode.disabled, sent=False, attempted=False, delivered=False, transport_mode="disabled", target_summary="none", message_kind=str(getattr(message, "kind", "unknown")), note="explicitly disabled")
     persist_send_result(base_dir=base_dir, result=result)
     return result
 

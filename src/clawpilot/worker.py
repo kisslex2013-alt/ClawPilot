@@ -75,9 +75,18 @@ def explain_why_full_cycle_is_not_default_execute() -> str:
 
 
 def describe_notification_transport_modes() -> list[str]:
-    return ["dry_run", "file_log", "disabled"]
+    return ["dry_run", "file_log", "disabled", "telegram_direct"]
 
 
 def build_notification_transport_summary(settings: AppSettings | None = None) -> dict[str, object]:
     settings = settings or load_settings()
     return {"transport": describe_transport_mode(settings), "modes": describe_notification_transport_modes(), "spec": build_transport_spec(settings).__dict__}
+
+
+def describe_live_transport_guardrails() -> list[str]:
+    return ["telegram_direct requires explicit --live.", "No live send by default.", "No secret leakage in summaries.", "No routing integration yet."]
+
+
+def build_telegram_transport_summary(settings: AppSettings | None = None) -> dict[str, object]:
+    settings = settings or load_settings()
+    return {"target": describe_client_target(settings), "guardrails": describe_live_transport_guardrails(), "enabled": settings.telegram_live_send_enabled}
