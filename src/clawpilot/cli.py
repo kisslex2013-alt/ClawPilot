@@ -10,6 +10,9 @@ from clawpilot.artifacts.clawloop import detect_known_artifacts
 from clawpilot.config import load_settings
 from clawpilot.dev.runner import execute_dry_run_workflow, execute_local_workflow
 from clawpilot.execution.contracts import ExecutionMode
+from clawpilot.notifier.builders import build_blocker_notification, build_completion_notification, build_digest_messages, build_live_progress_messages
+from clawpilot.notifier.contracts import ProgressNotificationPolicy
+from clawpilot.notifier.examples import example_blocker_message, example_completion_message, example_digest_feed, example_progress_feed
 from clawpilot.orchestration.registry import list_activity_names, list_workflow_names
 from clawpilot.progress.serialization import events_to_jsonl
 from clawpilot.runtime.paths import ensure_local_runtime_dirs
@@ -43,7 +46,7 @@ def _latest_run_dir() -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="clawpilot")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan", "temporal-smoke-plan", "temporal-connectivity-smoke", "temporal-worker-start-plan", "show-latest-run-summary", "show-run-files"):
+    for name in ("show-config", "check-env", "bootstrap-dev", "list-workflows", "list-activities", "list-temporal-workflows", "list-temporal-activities", "validate-registration", "show-worker-plan", "show-run-summary", "detect-artifacts", "sample-progress-jsonl", "temporal-client-target", "temporal-connectivity-check", "show-dev-server-hints", "show-task-queue", "show-worker-definition", "preview-worker", "preview-run-plan", "temporal-smoke-plan", "temporal-connectivity-smoke", "temporal-worker-start-plan", "show-latest-run-summary", "show-run-files", "render-progress-feed", "render-digest", "render-blocker", "render-completion"):
         sub.add_parser(name)
     dry = sub.add_parser("dry-run")
     dry_sub = dry.add_subparsers(dest="dry_cmd", required=True)
@@ -85,8 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "temporal-smoke-plan": print(json.dumps(build_local_smoke_plan(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run"), indent=2, sort_keys=True)); return 0
     if args.cmd == "temporal-connectivity-smoke": print(json.dumps(run_local_connectivity_smoke(workflow_name="smoke_check", task_id="sample-task", run_id="sample-run", connect=getattr(args, 'connect', False)), indent=2, sort_keys=True)); return 0
     if args.cmd == "temporal-worker-start-plan": print(json.dumps(build_worker_start_plan(connect=getattr(args, 'connect', False)).__dict__, indent=2, sort_keys=True)); return 0
-    if args.cmd == "temporal-start-workflow":
-        print(json.dumps(maybe_start_workflow(workflow_name={"smoke-check": "smoke_check", "dashboard-refresh": "dashboard_refresh", "full-cycle": "clawloop_full_cycle"}[args.workflow_name], task_id="sample-task", run_id="sample-run", connect=getattr(args, 'connect', False)), default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
+    if args.cmd == "temporal-start-workflow": print(json.dumps(maybe_start_workflow(workflow_name={"smoke-check": "smoke_check", "dashboard-refresh": "dashboard_refresh", "full-cycle": "clawloop_full_cycle"}[args.workflow_name], task_id="sample-task", run_id="sample-run", connect=getattr(args, 'connect', False)), default=lambda o: o.__dict__, indent=2, sort_keys=True)); return 0
     if args.cmd == "local-exec":
         wf_map = {"smoke-check": "smoke_check", "dashboard-refresh": "dashboard_refresh", "full-cycle": "clawloop_full_cycle"}
         mode = ExecutionMode.local_execute if getattr(args, 'execute', False) else ExecutionMode.preview
@@ -102,6 +104,14 @@ def main(argv: list[str] | None = None) -> int:
         latest = _latest_run_dir()
         files = [str(p) for p in sorted(latest.iterdir())] if latest.exists() else []
         print(json.dumps(files, indent=2, sort_keys=True)); return 0
+    if args.cmd == "render-progress-feed":
+        print(json.dumps(example_progress_feed(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "render-digest":
+        print(json.dumps(example_digest_feed(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "render-blocker":
+        print(json.dumps(example_blocker_message(), indent=2, sort_keys=True)); return 0
+    if args.cmd == "render-completion":
+        print(json.dumps(example_completion_message(), indent=2, sort_keys=True)); return 0
     if args.cmd == "dry-run":
         mapping = {"full-cycle": run_full_cycle, "smoke": run_smoke, "dashboard": run_dashboard, "notify": run_notify, "manifest": run_manifest}
         _print_run(args.dry_cmd, mapping[args.dry_cmd](dry_run=True)); return 0
