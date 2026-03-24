@@ -21,15 +21,15 @@ class ClawLoopFullCycleResult:
 
 @workflow.defn
 class ClawLoopFullCycleWorkflow:
-    """Workflow contract for the full cycle.
+    """Contract for the full ClawLoop cycle.
 
-    Expected steps:
+    Expected activity sequence:
     - full cycle
     - notify
     - dashboard
     - manifest
 
-    Progress hook points belong around each step boundary.
+    Progress events should be emitted at each stage boundary.
     """
 
     @workflow.run

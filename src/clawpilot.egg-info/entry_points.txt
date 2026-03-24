@@ -1,0 +1,2 @@
+[console_scripts]
+clawpilot = clawpilot.cli:main

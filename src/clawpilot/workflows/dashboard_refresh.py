@@ -21,7 +21,7 @@ class DashboardRefreshResult:
 
 @workflow.defn
 class DashboardRefreshWorkflow:
-    """Workflow contract for dashboard refresh."""
+    """Contract for dashboard refresh workflow."""
 
     @workflow.run
     async def run(self, input: DashboardRefreshInput) -> DashboardRefreshResult:

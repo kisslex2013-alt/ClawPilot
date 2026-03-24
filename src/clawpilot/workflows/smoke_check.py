@@ -21,7 +21,7 @@ class SmokeCheckResult:
 
 @workflow.defn
 class SmokeCheckWorkflow:
-    """Workflow contract for smoke verification."""
+    """Contract for smoke verification workflow."""
 
     @workflow.run
     async def run(self, input: SmokeCheckInput) -> SmokeCheckResult:
